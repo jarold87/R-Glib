@@ -1,0 +1,101 @@
+GlibDataTransformation <- function(GlibEnvironment) {
+
+  thisEnv <- environment()
+
+  trData <- NULL
+
+  this <- list(
+
+    thisEnv = thisEnv,
+
+    init = function(data) {
+      if (is.null(data) == FALSE) {
+        data <- prepare(data)
+      }
+      assign("trData", data, thisEnv)
+    },
+
+    read = function(file, abs = FALSE) {
+      filePath <- GlibEnvironment$getFilePath('inputDir', file, abs)
+      data <- read.table(filePath, quote='"', header=TRUE, sep=",", fill = TRUE)
+      data <- prepare(data)
+      assign("trData", data, thisEnv)
+    },
+
+    filterByDate = function(values = c(), unit = 'day') {
+      data <- get("trData", thisEnv)
+      d <- data
+      df <- getConfig('dateUnitAndFormat')
+      dc <- getConfig('dateColumn')
+      if (!unit %in% names(df)) {
+        stop(paste("Glib: ", "Unit is not exist!", " (", unit, ")", sep=""))
+      }
+      d[,paste(unit, 'GlibTemp', sep="_")] <- as.integer(format(as.POSIXct(d[,dc]), format=df[unit]))
+      data <- data[d[,paste(unit, 'GlibTemp', sep="_")] %in% values,]
+      assign("trData", data, thisEnv)
+    },
+
+    createDateColumns = function() {
+      data <- get("trData", thisEnv)
+      df <- getConfig('dateUnitAndFormat')
+      dc <-getConfig('dateColumn')
+      v <- lapply(df, function(x) {
+        as.integer(format(as.POSIXct(data[,dc]), format=x))
+      })
+      m <- matrix(unlist(v), nrow = nrow(data), byrow = FALSE)
+      data[,attributes(df)$names] <- m
+      assign("trData", data, thisEnv)
+    },
+
+    normalizeColumnValues = function(column, oldValues = c(), newValue) {
+      data <- get("trData", thisEnv)
+      values <- data[,column]
+      if (!is.factor(values)) {
+        data[,column] <- values[values %in% oldValues] <- newValue
+        return(data)
+      }
+      levels <- c(attributes(values)$levels, newValue)
+      values <- as.vector(values)
+      values[values %in% oldValues] <- newValue
+      levels <- levels[!levels %in% oldValues]
+      data[,column] <- factor(values, levels = levels)
+      assign("trData", data, thisEnv)
+    },
+
+    test = function() {
+      data <- get("trData", thisEnv)
+      data <- cbind(data, test=c(1:nrow(data)))
+      assign("trData", data, thisEnv)
+    },
+
+    getData = function() {
+      return(get("trData", thisEnv))
+    }
+
+  )
+
+  prepare <- function(data) {
+    dc <- getConfig('dateColumn')
+    uc <- getConfig('userIdColumn')
+    pc <- getConfig('productIdColumn')
+    data <- data[which(data[,dc] != ''),]
+    data[,uc] <- as.vector(as.character(data[,uc]))
+    data[,pc] <- as.vector(as.character(data[,pc]))
+    if (grepl('"', data[1,dc])) {
+      data[,dc] <- gsub('"', "", data[,dc])
+    }
+    if (grepl('T', data[1,dc]) & grepl('Z', data[1,dc])) {
+      data[,dc] <- as.character(as.POSIXlt(as.POSIXct(data[,dc], "%Y-%m-%dT%H:%M:%S", tz="UTC"), getConfig('defaultTimeZone')))
+    }
+    return(data)
+  }
+
+  getConfig <- function(key) {
+    return(GlibEnvironment$getConfig(key))
+  }
+
+  assign('this', this, envir=thisEnv)
+  class(this) <- append(class(this), "GlibDataTransformation")
+  return(this)
+
+}
