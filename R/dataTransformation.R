@@ -62,10 +62,23 @@ GlibDataTransformation <- function(GlibEnvironment) {
       assign("trData", data, thisEnv)
     },
 
-    test = function() {
+    filterByUserLifetime = function(value, unit = 'day') {
       data <- get("trData", thisEnv)
-      data <- cbind(data, test=c(1:nrow(data)))
-      assign("trData", data, thisEnv)
+      d <- data
+      df <- getConfig('dateUnitAndFormat')
+      ds <- getConfig('dateUnitInSec')
+      dc <- getConfig('dateColumn')
+      uc <- getConfig('userIdColumn')
+      if (!unit %in% names(df) || !unit %in% names(ds)) {
+        stop(paste("Glib: ", "Unit is not exist!", " (", unit, ")", sep=""))
+      }
+      tc <- 'GlibTemp_timestamp'
+      d[,tc] <- as.numeric(as.POSIXct(d[,dc]))
+      t <- aggregate(d[,tc], list(data[,uc]), function(x) x[length(x)] - x[1] )
+      print(as.vector(t[t[,2] > value * ds[unit],1]))
+      filteredUsers <- as.vector(t[t[,2] <= value * ds[unit],1])
+      d <- d[d[,uc] %in% filteredUsers,]
+      assign("trData", d, thisEnv)
     },
 
     getData = function() {

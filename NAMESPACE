@@ -7,6 +7,7 @@ S3method(Glib.readEventLogs,GlibDataTransformation)
 S3method(Glib.filterByDate,GlibDataTransformation)
 S3method(Glib.createDateColumns,GlibDataTransformation)
 S3method(Glib.normalizeColumnValues,GlibDataTransformation)
+S3method(Glib.filterByUserLifetime,GlibDataTransformation)
 S3method(Glib.getData,GlibDataTransformation)
 
 S3method(Glib.createUserProfiles,GlibUserProfiles)
@@ -26,6 +27,7 @@ export(Glib.readEventLogs)
 export(Glib.filterByDate)
 export(Glib.createDateColumns)
 export(Glib.normalizeColumnValues)
+export(Glib.filterByUserLifetime)
 export(Glib.getData)
 
 export(Glib.createUserProfilesManager)
@@ -37,3 +39,5 @@ export(Glib.createPartition)
 
 importFrom("stats", "aggregate")
 importFrom("utils", "read.table")
+importFrom("parallel", "mclapply")
+

@@ -88,24 +88,38 @@ GlibUserProfiles <- function(GlibEnvironment, data) {
 
   createPrepare <- function(data, events) {
     dataList <- list()
-    groupedValues <- aggregate(data$user_id, list(data[,getConfig('eventColumn')]), function(x) { length(unique(x)) })
+    ec <- getConfig('eventColumn')
+    uc <- getConfig('userIdColumn')
+    groupedValues <- aggregate(data[,uc], list(data[,ec]), function(x) { length(unique(x)) })
     values <- groupedValues[,2]
     stat <- matrix(calculate(values), ncol=4)
     colnames(stat) <- c('sum', 'mean', 'min', 'max')
     rownames(stat) <- c('user')
     dataList[['user']] <- groupedValues
-    for (i in 1:length(events)) {
-      event <- events[i]
-      fData <- data[data$event == event,]
-      if (nrow(fData)) {
-        groupedValues <- aggregate(fData[,getConfig('eventColumn')], list(fData[,getConfig('userIdColumn')]), length)
-        values <- groupedValues[,2]
-        stat <- rbind(stat, calculate(values))
-        stat <- addRowNameToTable(stat, event)
-        dataList[[event]] <- groupedValues
-      } else {
-        stat <- rbind(stat, c(0, 0, 0, 0))
-        stat <- addRowNameToTable(stat, event)
+    groups <- createGroupsByVector(events)
+    ret <- mclapply(1:length(groups), function(x) {
+      groupEvents <- groups[[x]]
+      r <- lapply(groupEvents, function(event) {
+        fData <- data[data$event == event,]
+        if (nrow(fData) < 1) return(NULL)
+        groupedValues <- aggregate(fData[,ec], list(fData[,uc]), length)
+        return(groupedValues)
+      })
+      names(r) <- groupEvents
+      return(r)
+    }, mc.cores = length(groups))
+    unlistRet <- list()
+    for (i in 1:length(ret)) {
+      r <- ret[[i]]
+      for (j in 1:length(r)) {
+        event <- names(r)[j]
+        groupedValues <- ret[[i]][[j]]
+        if (!is.null(groupedValues)) {
+          values <- groupedValues[,2]
+          stat <- rbind(stat, calculate(values))
+          stat <- addRowNameToTable(stat, event)
+          dataList[[event]] <- groupedValues
+        }
       }
     }
     return(list(stat=stat, dataList=dataList))
@@ -114,27 +128,29 @@ GlibUserProfiles <- function(GlibEnvironment, data) {
   createProfiles <- function(data, events, dataList, goalEvent) {
     uc <- getConfig('userIdColumn')
     users <- unique(data[,uc])
-    r <- lapply(users, function(x) {
-      r <- c()
-      for (i in 1:length(events)) {
-        v <- dataList[[events[i]]]
-        n <- 0
-        if (length(c(v[v[,1] == x,2])) > 0) {
-          n <- v[v[,1] == x,2]
-        }
-        r <- c(r, n)
-      }
-      return(r)
-    })
-    profiles <- matrix(unlist(r), nrow=length(users), ncol=length(events), byrow=T)
-    rownames(profiles) <- users
-    colnames(profiles) <- c(events)
+    groups <- createGroupsByVector(users)
+    ret <- mclapply(1:length(groups), function(x) {
+      groupUsers <- groups[[x]]
+      r <- lapply(groupUsers, function(x) {
+        unlist(lapply(events, function(e) {
+          v <- dataList[[e]]
+          n <- 0
+          if (length(c(v[v[,1] == x,2])) > 0) n <- v[v[,1] == x,2]
+          return(n)
+        }))
+      })
+      profiles <- matrix(unlist(r), nrow=length(groupUsers), ncol=length(events), byrow=T)
+      rownames(profiles) <- groupUsers
+      colnames(profiles) <- c(events)
+      return(profiles)
+    }, mc.cores = length(groups))
+    allProfile <- do.call("rbind", ret)
     if (is.null(goalEvent) == FALSE) {
       goalReachedUsers <- getGoalReachedUsers(data, goalEvent)
-      profiles <- cbind(profiles, goal = c(0))
-      profiles[goalReachedUsers,'goal'] <- 1
+      allProfile <- cbind(allProfile, goal = c(0))
+      allProfile[goalReachedUsers,'goal'] <- 1
     }
-    return(profiles)
+    return(allProfile)
   }
 
   getGoalReachedUsers <- function(data, goalEvent) {
@@ -153,6 +169,18 @@ GlibUserProfiles <- function(GlibEnvironment, data) {
   addRowNameToTable <- function(table, name) {
     rownames(table) <- c(rownames(table)[1:(length(rownames(table)) - 1)], name)
     return(table)
+  }
+
+  createGroupsByVector <- function(vector) {
+    core <- getConfig('enabledCore')
+    groups <- lapply(c(1:core), function(g) {
+      unit <- floor(length(vector) / core)
+      till <- unit * g
+      from <- till - unit + 1
+      if (g == core) till <- length(vector)
+      return(vector[from:till])
+    })
+    return(groups)
   }
 
   assign('this', this, envir=thisEnv)

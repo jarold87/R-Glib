@@ -4,6 +4,7 @@ GlibEnvironment <- function() {
 
   configs <- list(
 
+    enabledCore = 1,
     defaultTimeZone = 'Europe/Budapest',
     dateUnitAndFormat = c(
       hour="%H",
@@ -11,6 +12,13 @@ GlibEnvironment <- function() {
       sec="%S",
       day="%d",
       month="%m"
+    ),
+    dateUnitInSec = c(
+      hour=60 * 60,
+      min=60,
+      sec=1,
+      day=24 * 60 * 60,
+      month=30 * 24 * 60
     ),
     dateColumn = 'date',
     userIdColumn = 'user_id',

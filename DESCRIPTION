@@ -1,10 +1,10 @@
 Package: Glib
-Version: 0.1.0
+Version: 0.2.0
 Date: 2017-05-01
 Title:  Web analytics tools
 Author: Gabor Kassai
 Maintainer: Gabor Kassai <jarold87@gmail.com>
-Depends: R (>= 3.1.0)
+Depends: R (>= 3.1.0), parallel
 Description: Web analytics tools
 License: GPL (>= 2)
 URL: https://www.r-project.org

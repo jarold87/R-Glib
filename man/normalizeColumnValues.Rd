@@ -17,7 +17,10 @@ Replace all occurrences of the search strings with the replacement string in the
 \dontrun{
 DataTransformationManager <- Glib.createDataTransformationManager(GlibEnv)
 Glib.readEventLogs(DataTransformationManager, 'sample-export.csv')
-orderAlternatives <- c('0_order', '00_order', '000_order', 'AA_order', 'A_order', 'BB_order', 'B_order')
+orderAlternatives <- c(
+  '0_order', '00_order', '000_order', 'AA_order',
+  'A_order', 'BB_order', 'B_order'
+)
 Glib.normalizeColumnValues(DataTransformationManager, 'event', orderAlternatives, 'order')
 }
 }
