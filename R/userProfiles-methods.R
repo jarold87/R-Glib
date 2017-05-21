@@ -3,6 +3,12 @@ Glib.createUserProfilesManager <- function(env, data) GlibUserProfiles(env, data
 Glib.createUserProfiles <- function(manager) UseMethod("Glib.createUserProfiles")
 Glib.createUserProfiles.GlibUserProfiles <- function(manager) manager$createUserProfiles()
 
+Glib.createUserProfilesGroupedByTimePeriods <- function(manager, periodsInMin = c(1), sumPeriodValues = TRUE) UseMethod("Glib.createUserProfilesGroupedByTimePeriods")
+Glib.createUserProfilesGroupedByTimePeriods.GlibUserProfiles <- function(manager, periodsInMin = c(1), sumPeriodValues = TRUE) manager$createUserProfilesGroupedByTimePeriods(periodsInMin, sumPeriodValues)
+
+Glib.getEventSummary <- function(manager, event) UseMethod("Glib.getEventSummary")
+Glib.getEventSummary.GlibUserProfiles <- function(manager, event) manager$getEventSummary(event)
+
 Glib.getUserProfiles <- function(manager) UseMethod("Glib.getUserProfiles")
 Glib.getUserProfiles.GlibUserProfiles <- function(manager) manager$getUserProfiles()
 

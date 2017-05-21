@@ -24,6 +24,7 @@ GlibEnvironment <- function() {
     userIdColumn = 'user_id',
     productIdColumn = 'product_id',
     eventColumn = 'event',
+    pageColumn = 'page',
     events = c('click'),
     goalEvent = 'order'
 
