@@ -13,13 +13,17 @@ GlibUserProfiles <- function(GlibEnvironment, data) {
     createUserProfiles = function() {
       events <- getConfig('events')
       goalEvent <- getConfig('goalEvent')
-      if (is.null(data) == TRUE) {
+      if (is.null(data)) {
         stop(paste("Glib UserProfiles: ", "Data is NULL!", sep=""))
       }
       if (length(events) < 1) {
         stop(paste("Glib UserProfiles: ", "Events are missing!", sep=""))
       }
-      ret <- createPrepare(data, events)
+      goalReachedUsers <- NULL
+      if (!is.null(goalEvent)) {
+        goalReachedUsers <- getGoalReachedUsers(data, goalEvent)
+      }
+      ret <- createPrepare(data, events, goalReachedUsers)
       assign("userProfileStat", ret[['stat']], thisEnv)
       assign("eventSummary", ret[['dataList']], thisEnv)
       assign("userProfiles", createProfiles(data, events, ret[['dataList']], goalEvent), thisEnv)
@@ -35,6 +39,10 @@ GlibUserProfiles <- function(GlibEnvironment, data) {
         stop(paste("Glib UserProfiles: ", "Events are missing!", sep=""))
       }
       assign("userProfiles", createProfilesGroupedByTimePeriods(data, events, goalEvent, periodsInMin, sumPeriodValues), thisEnv)
+    },
+
+    getSummaryList = function() {
+      return(get("eventSummary", thisEnv))
     },
 
     getEventSummary = function(event) {
@@ -100,25 +108,35 @@ GlibUserProfiles <- function(GlibEnvironment, data) {
     return(GlibEnvironment$getConfig(key))
   }
 
-  createPrepare <- function(data, events, userIdColumn = NULL) {
+  createPrepare <- function(data, events, goalReachedUsers = NULL, userIdColumn = NULL) {
+    goalEvent <- getConfig('goalEvent')
     dataList <- list()
     ec <- getConfig('eventColumn')
-    uc <- userIdColumn
-    if (is.null(uc)) uc <- getConfig('userIdColumn')
-    groupedValues <- aggregate(data[,uc], list(data[,ec]), function(x) { length(unique(x)) })
+    id <- userIdColumn
+    uc <- getConfig('userIdColumn')
+    if (is.null(id)) id <- uc
+    groupedValues <- aggregate(data[,id], list(data[,ec]), function(x) { length(unique(x)) })
     values <- groupedValues[,2]
     stat <- matrix(calculate(values), ncol=4)
     colnames(stat) <- c('sum', 'mean', 'min', 'max')
     rownames(stat) <- c('user')
-    dataList[['user']] <- groupedValues
     groups <- createGroupsByVector(events)
     ret <- mclapply(1:length(groups), function(x) {
       groupEvents <- groups[[x]]
       r <- lapply(groupEvents, function(event) {
         fData <- data[data$event == event,]
         if (nrow(fData) < 1) return(NULL)
-        groupedValues <- aggregate(fData[,ec], list(fData[,uc]), length)
-        colnames(groupedValues) <- c('user', 'count')
+        groupedValues <- aggregate(fData[,ec], list(fData[,id]), length)
+        userIds <- aggregate(fData[,uc], list(fData[,id]), function(x) unique(x)[1])
+        groupedValues <- data.frame(id = groupedValues[,1], user = userIds[,2], count = groupedValues[,2])
+        if ('timePeriod' %in% colnames(fData)) {
+          periods <- aggregate(fData[,'timePeriod'], list(fData[,id]), function(x) unique(x)[1])
+          groupedValues[,'time_period'] <- periods[,2]
+        }
+        if (!is.null(goalReachedUsers)) {
+          groupedValues[,'goal'] <- c(0)
+          groupedValues[groupedValues$user %in% goalReachedUsers,'goal'] <- c(1)
+        }
         return(groupedValues)
       })
       names(r) <- groupEvents
@@ -131,7 +149,7 @@ GlibUserProfiles <- function(GlibEnvironment, data) {
         event <- names(r)[j]
         groupedValues <- ret[[i]][[j]]
         if (!is.null(groupedValues)) {
-          values <- groupedValues[,2]
+          values <- groupedValues[,'count']
           stat <- rbind(stat, calculate(values))
           stat <- addRowNameToTable(stat, event)
           dataList[[event]] <- groupedValues
@@ -172,6 +190,10 @@ GlibUserProfiles <- function(GlibEnvironment, data) {
   }
 
   createProfilesGroupedByTimePeriods <- function(data, events, goalEvent, periodsInMin, sumPeriodValues) {
+    goalReachedUsers <- NULL
+    if (!is.null(goalEvent)) {
+      goalReachedUsers <- getGoalReachedUsers(data, goalEvent)
+    }
     uc <- getConfig('userIdColumn')
     users <- unique(data[,uc])
     groups <- createGroupsByVector(users)
@@ -182,7 +204,7 @@ GlibUserProfiles <- function(GlibEnvironment, data) {
       return(generatedData)
     }, mc.cores = length(groups))
     generatedData <- do.call("rbind", ret)
-    ret <- createPrepare(generatedData, events, 'user_period_id')
+    ret <- createPrepare(generatedData, events, goalReachedUsers, 'user_period_id')
     assign("userProfileStat", ret[['stat']], thisEnv)
     assign("eventSummary", ret[['dataList']], thisEnv)
     ret <- mclapply(1:length(groups), function(x) {
