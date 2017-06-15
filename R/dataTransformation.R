@@ -62,7 +62,7 @@ GlibDataTransformation <- function(GlibEnvironment) {
       assign("trData", data, thisEnv)
     },
 
-    filterByUserLifetime = function(value, unit = 'day') {
+    filterByUserLifetime = function(value, unit = 'day', filterUser = TRUE) {
       data <- get("trData", thisEnv)
       d <- data
       df <- getConfig('dateUnitAndFormat')
@@ -74,10 +74,35 @@ GlibDataTransformation <- function(GlibEnvironment) {
       }
       tc <- 'GlibTemp_timestamp'
       d[,tc] <- as.numeric(as.POSIXct(d[,dc]))
-      t <- aggregate(d[,tc], list(data[,uc]), function(x) x[length(x)] - x[1] )
-      print(as.vector(t[t[,2] > value * ds[unit],1]))
+      t <- aggregate(d[,tc], list(d[,uc]), function(x) x[length(x)] - x[1] )
       filteredUsers <- as.vector(t[t[,2] <= value * ds[unit],1])
-      d <- d[d[,uc] %in% filteredUsers,]
+      if (filterUser) {
+        d <- d[d[,uc] %in% filteredUsers,]
+        assign("trData", d, thisEnv)
+        return()
+      }
+      ci <- aggregate(d[!(d[,uc] %in% filteredUsers),tc], list(d[!(d[,uc] %in% filteredUsers),uc]), function(x) {
+        f <- x[1]
+        r <- unlist(lapply(c(2:length(x)), function(i) {
+          if (is.na(x[i])) return(c())
+          if (x[i] - f > value * ds[unit]) return(x[i])
+        }))
+        if (length(r)) return(as.integer(r[1]))
+        return(0)
+      })
+      d$GlibTemp_keep <- c(TRUE)
+      groups <- createGroupsByVector(ci[,1])
+      ret <- mclapply(1:length(groups), function(x) {
+        groupUsers <- groups[[x]]
+        unlist(lapply(c(1:nrow(ci)), function(i) {
+          userId <- ci[i,1]
+          cutTime <- ci[i,2]
+          if (cutTime > 0) rownames(d[d$user_id == userId & d[,tc] >= cutTime, ])
+        }))
+      }, mc.cores = length(groups))
+      d[unlist(ret),'GlibTemp_keep'] <- c(FALSE)
+      d <- d[d$GlibTemp_keep == TRUE,]
+      d$GlibTemp_keep <- NULL
       assign("trData", d, thisEnv)
     },
 
@@ -101,6 +126,18 @@ GlibDataTransformation <- function(GlibEnvironment) {
       data[,dc] <- as.character(as.POSIXlt(as.POSIXct(data[,dc], "%Y-%m-%dT%H:%M:%S", tz="UTC"), getConfig('defaultTimeZone')))
     }
     return(data)
+  }
+
+  createGroupsByVector <- function(vector) {
+    core <- getConfig('enabledCore')
+    groups <- lapply(c(1:core), function(g) {
+      unit <- floor(length(vector) / core)
+      till <- unit * g
+      from <- till - unit + 1
+      if (g == core) till <- length(vector)
+      return(vector[from:till])
+    })
+    return(groups)
   }
 
   getConfig <- function(key) {

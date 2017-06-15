@@ -15,5 +15,5 @@ Glib.createDateColumns.GlibDataTransformation <- function(manager) manager$creat
 Glib.normalizeColumnValues <- function(manager, column, oldValues = c(), newValue) UseMethod("Glib.normalizeColumnValues")
 Glib.normalizeColumnValues.GlibDataTransformation <- function(manager, column, oldValues = c(), newValue) manager$normalizeColumnValues(column, oldValues, newValue)
 
-Glib.filterByUserLifetime <- function(manager, value = 1, unit = 'day') UseMethod("Glib.filterByUserLifetime")
-Glib.filterByUserLifetime.GlibDataTransformation <- function(manager, value = 1, unit = 'day') manager$filterByUserLifetime(value, unit)
+Glib.filterByUserLifetime <- function(manager, value = 1, unit = 'day', filterUser = TRUE) UseMethod("Glib.filterByUserLifetime")
+Glib.filterByUserLifetime.GlibDataTransformation <- function(manager, value = 1, unit = 'day', filterUser = TRUE) manager$filterByUserLifetime(value, unit, filterUser)
