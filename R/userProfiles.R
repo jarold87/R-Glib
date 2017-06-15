@@ -171,7 +171,7 @@ GlibUserProfiles <- function(GlibEnvironment, data) {
         c(x, data[data[,id] == x,uc][1], unlist(lapply(events, function(e) {
           v <- dataList[[e]]
           n <- 0
-          if (length(c(v[v[,1] == x,2])) > 0) n <- v[v[,1] == x,2]
+          if (length(c(v[v[,1] == x,3])) > 0) n <- v[v[,1] == x,3]
           return(n)
         })))
       })
