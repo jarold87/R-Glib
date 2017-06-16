@@ -94,9 +94,10 @@ GlibDataTransformation <- function(GlibEnvironment) {
       groups <- createGroupsByVector(ci[,1])
       ret <- mclapply(1:length(groups), function(x) {
         groupUsers <- groups[[x]]
-        unlist(lapply(c(1:nrow(ci)), function(i) {
-          userId <- ci[i,1]
-          cutTime <- ci[i,2]
+        cig <- ci[ci[,1] %in% groupUsers, ]
+        unlist(lapply(c(1:nrow(cig)), function(i) {
+          userId <- cig[i,1]
+          cutTime <- cig[i,2]
           if (cutTime > 0) rownames(d[d$user_id == userId & d[,tc] >= cutTime, ])
         }))
       }, mc.cores = length(groups))
