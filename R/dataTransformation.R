@@ -20,6 +20,7 @@ GlibDataTransformation <- function(GlibEnvironment) {
       data <- read.table(filePath, quote='"', header=TRUE, sep=",", fill = TRUE)
       data <- prepare(data)
       assign("trData", data, thisEnv)
+      remove(data)
     },
 
     filterByDate = function(values = c(), unit = 'day') {
@@ -90,11 +91,17 @@ GlibDataTransformation <- function(GlibEnvironment) {
         return(0)
       })
       d$GlibTemp_keep <- FALSE
-      for (i in c(1:nrow(ci))) {
-        userId <- ci[i,1]
-        cutTime <- ci[i,2]
-        if (cutTime > 0) d$GlibTemp_keep[d$user_id == userId & d[,tc] <= cutTime] <- TRUE
-      }
+      groups <- createGroupsByVector(ci[,1], 2)
+      ret <- mclapply(1:length(groups), function(x) {
+        groupUsers <- groups[[x]]
+        cig <- ci[ci[,1] %in% groupUsers, ]
+        unlist(lapply(c(1:nrow(cig)), function(i) {
+          userId <- cig[i,1]
+          cutTime <- cig[i,2]
+          if (cutTime > 0) rownames(d[d$user_id == userId & d[,tc] <= cutTime, ])
+        }))
+      }, mc.cores = length(groups))
+      d[unlist(ret),'GlibTemp_keep'] <- TRUE
       d <- d[d$GlibTemp_keep == TRUE,]
       d$GlibTemp_keep <- NULL
       assign("trData", d, thisEnv)
