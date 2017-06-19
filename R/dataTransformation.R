@@ -90,20 +90,23 @@ GlibDataTransformation <- function(GlibEnvironment) {
         if (length(r)) return(as.integer(r[1]))
         return(0)
       })
-      d$GlibTemp_keep <- FALSE
-      groups <- createGroupsByVector(ci[,1], 2)
-      ret <- mclapply(1:length(groups), function(x) {
-        groupUsers <- groups[[x]]
-        cig <- ci[ci[,1] %in% groupUsers, ]
-        unlist(lapply(c(1:nrow(cig)), function(i) {
-          userId <- cig[i,1]
-          cutTime <- cig[i,2]
-          if (cutTime > 0) rownames(d[d$user_id == userId & d[,tc] <= cutTime, ])
-        }))
-      }, mc.cores = length(groups))
-      d[unlist(ret),'GlibTemp_keep'] <- TRUE
-      d <- d[d$GlibTemp_keep == TRUE,]
-      d$GlibTemp_keep <- NULL
+      d <- cutByTimestamp(d, ci)
+      assign("trData", d, thisEnv)
+    },
+
+    dropEventLogsAfterGoalEvent = function() {
+      d <- get("trData", thisEnv)
+      tc <- 'GlibTemp_timestamp'
+      goalEvent <- getConfig('goalEvent')
+      dc <- getConfig('dateColumn')
+      uc <- getConfig('userIdColumn')
+      d[,tc] <- as.numeric(as.POSIXct(d[,dc]))
+      goalReachedUsers <- getGoalReachedUsers()
+      goalEventTime <- lapply(goalReachedUsers, function(user) {
+        return(d[d$user_id == user & d$event == goalEvent, 'GlibTemp_timestamp'][1])
+      })
+      ci <- data.frame(user = goalReachedUsers, goalEventTime = unlist(goalEventTime))
+      d <- cutByTimestamp(d, ci)
       assign("trData", d, thisEnv)
     },
 
@@ -127,6 +130,24 @@ GlibDataTransformation <- function(GlibEnvironment) {
       data[,dc] <- as.character(as.POSIXlt(as.POSIXct(data[,dc], "%Y-%m-%dT%H:%M:%S", tz="UTC"), getConfig('defaultTimeZone')))
     }
     return(data)
+  }
+
+  cutByTimestamp <- function(d, cutTable) {
+    d$GlibTemp_keep <- TRUE
+    groups <- createGroupsByVector(cutTable[,1], 2)
+    ret <- mclapply(1:length(groups), function(x) {
+      groupUsers <- groups[[x]]
+      cig <- cutTable[cutTable[,1] %in% groupUsers, ]
+      unlist(lapply(c(1:nrow(cig)), function(i) {
+        userId <- cig[i,1]
+        cutTime <- cig[i,2]
+        if (cutTime > 0) rownames(d[d$user_id == userId & d[,tc] > cutTime, ])
+      }))
+    }, mc.cores = length(groups))
+    d[unlist(ret),'GlibTemp_keep'] <- FALSE
+    d <- d[d$GlibTemp_keep == TRUE,]
+    d$GlibTemp_keep <- NULL
+    return(d)
   }
 
   createGroupsByVector <- function(vector, maxCore = NULL) {

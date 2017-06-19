@@ -17,3 +17,6 @@ Glib.normalizeColumnValues.GlibDataTransformation <- function(manager, column, o
 
 Glib.filterByUserLifetime <- function(manager, value = 1, unit = 'day', filterUser = TRUE) UseMethod("Glib.filterByUserLifetime")
 Glib.filterByUserLifetime.GlibDataTransformation <- function(manager, value = 1, unit = 'day', filterUser = TRUE) manager$filterByUserLifetime(value, unit, filterUser)
+
+Glib.dropEventLogsAfterGoalEvent <- function(manager) UseMethod("Glib.dropEventLogsAfterGoalEvent")
+Glib.dropEventLogsAfterGoalEvent.GlibDataTransformation <- function(manager) manager$dropEventLogsAfterGoalEvent()
