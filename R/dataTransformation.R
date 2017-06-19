@@ -91,7 +91,7 @@ GlibDataTransformation <- function(GlibEnvironment) {
         return(0)
       })
       d$GlibTemp_keep <- c(TRUE)
-      groups <- createGroupsByVector(ci[,1])
+      groups <- createGroupsByVector(ci[,1], 2)
       ret <- mclapply(1:length(groups), function(x) {
         groupUsers <- groups[[x]]
         cig <- ci[ci[,1] %in% groupUsers, ]
@@ -129,8 +129,9 @@ GlibDataTransformation <- function(GlibEnvironment) {
     return(data)
   }
 
-  createGroupsByVector <- function(vector) {
+  createGroupsByVector <- function(vector, maxCore = NULL) {
     core <- getConfig('enabledCore')
+    if (!is.null(maxCore) && core > maxCore) core <- maxCore
     groups <- lapply(c(1:core), function(g) {
       unit <- floor(length(vector) / core)
       till <- unit * g
