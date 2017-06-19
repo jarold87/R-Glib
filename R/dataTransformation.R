@@ -63,8 +63,7 @@ GlibDataTransformation <- function(GlibEnvironment) {
     },
 
     filterByUserLifetime = function(value, unit = 'day', filterUser = TRUE) {
-      data <- get("trData", thisEnv)
-      d <- data
+      d <- get("trData", thisEnv)
       df <- getConfig('dateUnitAndFormat')
       ds <- getConfig('dateUnitInSec')
       dc <- getConfig('dateColumn')
