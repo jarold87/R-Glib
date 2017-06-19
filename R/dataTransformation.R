@@ -101,7 +101,8 @@ GlibDataTransformation <- function(GlibEnvironment) {
       dc <- getConfig('dateColumn')
       uc <- getConfig('userIdColumn')
       d[,tc] <- as.numeric(as.POSIXct(d[,dc]))
-      goalReachedUsers <- getGoalReachedUsers()
+      goalReachedUsers <- getGoalReachedUsers(d)
+      if (!length(goalReachedUsers)) return()
       goalEventTime <- lapply(goalReachedUsers, function(user) {
         return(d[d$user_id == user & d$event == goalEvent, 'GlibTemp_timestamp'][1])
       })
@@ -133,14 +134,15 @@ GlibDataTransformation <- function(GlibEnvironment) {
   }
 
   cutByTimestamp <- function(d, cutTable) {
+    tc <- 'GlibTemp_timestamp'
     d$GlibTemp_keep <- TRUE
     groups <- createGroupsByVector(cutTable[,1], 2)
     ret <- mclapply(1:length(groups), function(x) {
       groupUsers <- groups[[x]]
-      cig <- cutTable[cutTable[,1] %in% groupUsers, ]
-      unlist(lapply(c(1:nrow(cig)), function(i) {
-        userId <- cig[i,1]
-        cutTime <- cig[i,2]
+      cutTable <- cutTable[cutTable[,1] %in% groupUsers, ]
+      unlist(lapply(c(1:nrow(cutTable)), function(i) {
+        userId <- cutTable[i,1]
+        cutTime <- cutTable[i,2]
         if (cutTime > 0) rownames(d[d$user_id == userId & d[,tc] > cutTime, ])
       }))
     }, mc.cores = length(groups))
@@ -161,6 +163,14 @@ GlibDataTransformation <- function(GlibEnvironment) {
       return(vector[from:till])
     })
     return(groups)
+  }
+
+  getGoalReachedUsers <- function(data) {
+    goalEvent <- getConfig('goalEvent')
+    if (is.null(goalEvent) == FALSE) {
+      return(unique(data[data[,getConfig('eventColumn')] == goalEvent,getConfig('userIdColumn')]))
+    }
+    stop(paste("Glib UserProfiles: ", "Conversion event is missing!", sep=""))
   }
 
   getConfig <- function(key) {
