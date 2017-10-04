@@ -17,7 +17,13 @@ GlibDataTransformation <- function(GlibEnvironment) {
 
     read = function(file, abs = FALSE) {
       filePath <- GlibEnvironment$getFilePath('inputDir', file, abs)
-      data <- read.table(filePath, quote='"', header=TRUE, sep=",", fill = TRUE)
+      data <- tryCatch( {
+        read.table(filePath, quote='"', header=TRUE, sep=",", fill = TRUE)
+      }, warning = function(war) {
+        return(FALSE)
+      }, error = function(err) {
+        return(FALSE)
+      })
       data <- prepare(data)
       assign("trData", data, thisEnv)
       remove(data)
@@ -81,6 +87,10 @@ GlibDataTransformation <- function(GlibEnvironment) {
         assign("trData", d, thisEnv)
         return()
       }
+      if (!nrow(d[!(d[,uc] %in% filteredUsers),])) {
+        assign("trData", d, thisEnv)
+        return()
+      }
       ci <- aggregate(d[!(d[,uc] %in% filteredUsers),tc], list(d[!(d[,uc] %in% filteredUsers),uc]), function(x) {
         f <- x[1]
         r <- unlist(lapply(c(2:length(x)), function(i) {
@@ -110,6 +120,24 @@ GlibDataTransformation <- function(GlibEnvironment) {
       d <- cutByTimestamp(d, ci)
       assign("trData", d, thisEnv)
     },
+    
+    dropEventLogsAfterAnEvent = function(event) {
+      d <- get("trData", thisEnv)
+      tc <- 'GlibTemp_timestamp'
+      dc <- getConfig('dateColumn')
+      uc <- getConfig('userIdColumn')
+      d[,tc] <- as.numeric(as.POSIXct(d[,dc]))
+      users <- unique(d[,uc])
+      goalReachedUsers <- getGoalReachedUsers(d)
+      if (length(goalReachedUsers)) users <- users[!(users %in% goalReachedUsers)]
+      if (!length(users)) return()
+      goalEventTime <- lapply(users, function(user) {
+        return(d[d$user_id == user & d$event == event, 'GlibTemp_timestamp'][1])
+      })
+      ci <- data.frame(user = users, goalEventTime = unlist(goalEventTime))
+      d <- cutByTimestamp(d, ci)
+      assign("trData", d, thisEnv)
+    },
 
     getData = function() {
       return(get("trData", thisEnv))
@@ -118,6 +146,7 @@ GlibDataTransformation <- function(GlibEnvironment) {
   )
 
   prepare <- function(data) {
+    if (is.logical(data) || is.null(data) || is.null(colnames(data)) || colnames(data)[1] != 'id') return(FALSE)
     dc <- getConfig('dateColumn')
     uc <- getConfig('userIdColumn')
     pc <- getConfig('productIdColumn')

@@ -1,5 +1,11 @@
 Glib.createUserProfilesManager <- function(env, data) GlibUserProfiles(env, data)
 
+Glib.getUniqueEventOperations <- function(manager) UseMethod("Glib.getUniqueEventOperations")
+Glib.getUniqueEventOperations.GlibUserProfiles <- function(manager) manager$getUniqueEventOperations()
+
+Glib.setUniqueEventOperation <- function(manager, event, operation) UseMethod("Glib.setUniqueEventOperation")
+Glib.setUniqueEventOperation.GlibUserProfiles <- function(manager, event, operation) manager$setUniqueEventOperation(event, operation)
+
 Glib.createUserProfiles <- function(manager) UseMethod("Glib.createUserProfiles")
 Glib.createUserProfiles.GlibUserProfiles <- function(manager) manager$createUserProfiles()
 

@@ -20,3 +20,6 @@ Glib.filterByUserLifetime.GlibDataTransformation <- function(manager, value = 1,
 
 Glib.dropEventLogsAfterGoalEvent <- function(manager) UseMethod("Glib.dropEventLogsAfterGoalEvent")
 Glib.dropEventLogsAfterGoalEvent.GlibDataTransformation <- function(manager) manager$dropEventLogsAfterGoalEvent()
+
+Glib.dropEventLogsAfterAnEvent <- function(manager, event) UseMethod("Glib.dropEventLogsAfterAnEvent")
+Glib.dropEventLogsAfterAnEvent.GlibDataTransformation <- function(manager, event) manager$dropEventLogsAfterAnEvent(event)

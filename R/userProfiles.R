@@ -5,10 +5,21 @@ GlibUserProfiles <- function(GlibEnvironment, data) {
   userProfileStat <- NULL
   userProfiles <- NULL
   eventSummary <- NULL
+  uniqueEventOperations <- list()
 
   this <- list(
 
     thisEnv = thisEnv,
+    
+    getUniqueEventOperations = function() {
+      get('uniqueEventOperations', thisEnv)
+    },
+    
+    setUniqueEventOperation = function(event, operation) {
+      uniqueEventOperations <- get('uniqueEventOperations', thisEnv)
+      uniqueEventOperations[[event]] <- operation
+      assign("uniqueEventOperations", uniqueEventOperations, thisEnv)
+    },
 
     createUserProfiles = function() {
       events <- getConfig('events')
@@ -114,6 +125,8 @@ GlibUserProfiles <- function(GlibEnvironment, data) {
     ec <- getConfig('eventColumn')
     id <- userIdColumn
     uc <- getConfig('userIdColumn')
+    iv <- getConfig('eventIntValueColumn')
+    uniqueEventOperations <- get('uniqueEventOperations', thisEnv)
     if (is.null(id)) id <- uc
     groupedValues <- aggregate(data[,id], list(data[,ec]), function(x) { length(unique(x)) })
     values <- groupedValues[,2]
@@ -126,7 +139,10 @@ GlibUserProfiles <- function(GlibEnvironment, data) {
       r <- lapply(groupEvents, function(event) {
         fData <- data[data$event == event,]
         if (nrow(fData) < 1) return(NULL)
-        groupedValues <- aggregate(fData[,ec], list(fData[,id]), length)
+        if (!is.null(iv) && event %in% names(uniqueEventOperations)) {
+          groupedValues <- aggregate(fData[,iv], list(fData[,id]), uniqueEventOperations[[event]])
+        }
+        else groupedValues <- aggregate(fData[,ec], list(fData[,id]), length)
         userIds <- aggregate(fData[,uc], list(fData[,id]), function(x) unique(x)[1])
         groupedValues <- data.frame(id = groupedValues[,1], user = userIds[,2], count = groupedValues[,2])
         if ('timePeriod' %in% colnames(fData)) {
