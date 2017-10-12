@@ -4,7 +4,8 @@ Date: 2017-05-01
 Title:  Web analytics tools
 Author: Gabor Kassai
 Maintainer: Gabor Kassai <jarold87@gmail.com>
-Depends: R (>= 3.1.0), parallel
+Depends: R (>= 3.1.0), parallel, data.table
+Imports: data.table
 Description: Web analytics tools
 License: GPL (>= 2)
 URL: https://www.r-project.org
