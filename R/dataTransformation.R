@@ -179,8 +179,7 @@ GlibDataTransformation <- function(GlibEnvironment) {
         }
       }))
     }, mc.cores = length(groups))
-    print(typeof(unlist(ret)))
-    d[unlist(ret), GlibTemp_keep := FALSE]
+    d[as.numeric(unlist(ret)), GlibTemp_keep := FALSE]
     d <- d[d$GlibTemp_keep == TRUE,]
     d$GlibTemp_keep <- NULL
     return(d)
