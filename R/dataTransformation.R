@@ -102,7 +102,6 @@ GlibDataTransformation <- function(GlibEnvironment) {
         return(0)
       })
       d <- cutByTimestamp(d, ci)
-      print('foo')
       assign("trData", d, thisEnv)
     },
 
@@ -175,11 +174,11 @@ GlibDataTransformation <- function(GlibEnvironment) {
         userId <- cutTable[i,1]
         cutTime <- cutTable[i,2]
         if (cutTime > 0) {
-          rownames(d[d$user_id == userId & d[[tc]] > cutTime, ])
+          d[d$user_id == userId & d[[tc]] > cutTime, ]$id
         }
       }))
     }, mc.cores = length(groups))
-    d[as.numeric(unlist(ret)), GlibTemp_keep := FALSE]
+    d[d$id %in% as.character(unique(unlist(ret))), GlibTemp_keep := FALSE]
     d <- d[d$GlibTemp_keep == TRUE,]
     d$GlibTemp_keep <- NULL
     return(d)
