@@ -111,31 +111,31 @@ GlibDataTransformation <- function(GlibEnvironment) {
       goalEvent <- getConfig('goalEvent')
       dc <- getConfig('dateColumn')
       uc <- getConfig('userIdColumn')
-      d[[,tc]] <- as.numeric(as.POSIXct(d[[,dc]]))
+      d[[tc]] <- as.numeric(as.POSIXct(d[[dc]]))
       goalReachedUsers <- getGoalReachedUsers(d)
       if (!length(goalReachedUsers)) return()
       goalEventTime <- lapply(goalReachedUsers, function(user) {
-        return(d[[d$user_id == user & d$event == goalEvent, 'GlibTemp_timestamp']][1])
+        return(d[user_id == user & event == goalEvent][['GlibTemp_timestamp']][1])
       })
-      ci <- data.table(user = goalReachedUsers, goalEventTime = unlist(goalEventTime))
+      ci <- data.frame(user = goalReachedUsers, goalEventTime = unlist(goalEventTime))
       d <- cutByTimestamp(d, ci)
       assign("trData", d, thisEnv)
     },
 
-    dropEventLogsAfterAnEvent = function(event) {
+    dropEventLogsAfterAnEvent = function(an_event) {
       d <- get("trData", thisEnv)
       tc <- 'GlibTemp_timestamp'
       dc <- getConfig('dateColumn')
       uc <- getConfig('userIdColumn')
-      d[[,tc]] <- as.numeric(as.POSIXct(d[[,dc]]))
-      users <- unique(d[[,uc]])
+      d[[tc]] <- as.numeric(as.POSIXct(d[[dc]]))
+      users <- unique(d[[uc]])
       goalReachedUsers <- getGoalReachedUsers(d)
       if (length(goalReachedUsers)) users <- users[!(users %in% goalReachedUsers)]
       if (!length(users)) return()
       goalEventTime <- lapply(users, function(user) {
-        return(d[d$user_id == user & d$event == event, 'GlibTemp_timestamp'][1])
+        return(d[user_id == user & event == an_event][['GlibTemp_timestamp']][1])
       })
-      ci <- data.table(user = users, goalEventTime = unlist(goalEventTime))
+      ci <- data.frame(user = users, goalEventTime = unlist(goalEventTime))
       d <- cutByTimestamp(d, ci)
       assign("trData", d, thisEnv)
     },
@@ -200,7 +200,7 @@ GlibDataTransformation <- function(GlibEnvironment) {
   getGoalReachedUsers <- function(data) {
     goalEvent <- getConfig('goalEvent')
     if (is.null(goalEvent) == FALSE) {
-      return(unique(data[data[[,getConfig('eventColumn')]] == goalEvent,getConfig('userIdColumn')]))
+      return(unique(data[data[[getConfig('eventColumn')]] == goalEvent, getConfig('userIdColumn'), with=F][[1]]))
     }
     stop(paste("Glib UserProfiles: ", "Conversion event is missing!", sep=""))
   }
