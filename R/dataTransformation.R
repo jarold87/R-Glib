@@ -128,8 +128,6 @@ GlibDataTransformation <- function(GlibEnvironment) {
       uc <- getConfig('userIdColumn')
       d[,tc] <- as.numeric(as.POSIXct(d[,dc]))
       users <- unique(d[,uc])
-      goalReachedUsers <- getGoalReachedUsers(d)
-      if (length(goalReachedUsers)) users <- users[!(users %in% goalReachedUsers)]
       if (!length(users)) return()
       goalEventTime <- lapply(users, function(user) {
         return(d[d$user_id == user & d$event == event, 'GlibTemp_timestamp'][1])
